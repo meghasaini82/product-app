@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
+const fs = require('fs');
 
 // Load environment variables
 dotenv.config();
@@ -14,16 +15,23 @@ const productRoutes = require('./routes/products');
 // Initialize app
 const app = express();
 
+// ✅ Ensure uploads folder exists (Fix for ENOENT on Render)
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
 // Middleware
 app.use(cors({
     origin: process.env.CLIENT_URL || 'http://localhost:3000',
     credentials: true
 }));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Static files - uploads folder
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(uploadsDir));
 
 // Database connection
 mongoose.connect(process.env.MONGODB_URI)
