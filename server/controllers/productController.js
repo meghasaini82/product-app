@@ -2,6 +2,11 @@ const Product = require('../models/Product');
 const fs = require('fs');
 const path = require('path');
 
+// ✅ Helper: get base URL (prefer env for production)
+const getBaseUrl = (req) => {
+    return process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
+};
+
 // Get all products
 exports.getAllProducts = async (req, res) => {
     try {
@@ -78,8 +83,12 @@ exports.createProduct = async (req, res) => {
             exchangeEligibility
         } = req.body;
 
-        // Collect image paths
-        const images = req.files ? req.files.map(file => `/uploads/${file.filename}`) : [];
+        const baseUrl = getBaseUrl(req);
+
+        // ✅ Full image URLs (fix mixed content)
+        const images = req.files
+            ? req.files.map(file => `${baseUrl}/uploads/${file.filename}`)
+            : [];
 
         const product = await Product.create({
             productName,
@@ -146,9 +155,10 @@ exports.updateProduct = async (req, res) => {
         if (brandName) product.brandName = brandName;
         if (exchangeEligibility) product.exchangeEligibility = exchangeEligibility;
 
-        // Handle new images
+        // ✅ Handle new images with full URL
         if (req.files && req.files.length > 0) {
-            const newImages = req.files.map(file => `/uploads/${file.filename}`);
+            const baseUrl = getBaseUrl(req);
+            const newImages = req.files.map(file => `${baseUrl}/uploads/${file.filename}`);
             product.images = [...product.images, ...newImages];
         }
 
@@ -188,9 +198,17 @@ exports.deleteProduct = async (req, res) => {
             });
         }
 
-        // Delete images from uploads folder
-        product.images.forEach(imagePath => {
-            const fullPath = path.join(__dirname, '..', imagePath);
+        // ✅ Delete images from uploads folder (works for full URL and relative paths)
+        product.images.forEach((imagePath) => {
+            let relPath = imagePath; // default
+
+            try {
+                if (typeof imagePath === 'string' && imagePath.startsWith('http')) {
+                    relPath = new URL(imagePath).pathname; // e.g. /uploads/abc.png
+                }
+            } catch (e) { }
+
+            const fullPath = path.join(__dirname, '..', relPath);
             if (fs.existsSync(fullPath)) {
                 fs.unlinkSync(fullPath);
             }
