@@ -22,9 +22,10 @@
   "devDependencies": {
     "nodemon": "^2.0.22"
   }
-  {
-  "email": "megha@test.com",
-  "password": "123456"
+ {
+  "name": "User A",
+  "email": "user123@test.com",
+  "password": "password123"
 }
 
 }
